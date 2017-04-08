@@ -21,9 +21,17 @@ async function scrape() {
     for (let link of allLinks) {
         const href = await link.getAttribute("href");
         await driver2.get(href);
-        const authors = await driver2.findElements(By.xpath("//*[@id='formSmash:some']/h3"));
-        const authorNames = await Promise.all(authors.map(author => author.getText()));
-        console.log("Authors: ", authorNames);
+        const someAuthors = await driver2.findElements(By.xpath("//*[@id='formSmash:some']/h3"));
+        let someAuthorNames = await Promise.all(someAuthors.map(author => author.getText()));
+        try {
+            const moreAuthorsLink = await driver2.findElement(By.css("#formSmash\\:j_idt225 > span"));
+            await moreAuthorsLink.click();
+            const allAuthors = await driver2.findElements(By.xpath("//*[@id='formSmash:all']/h3"));
+            const allAuthorNames = await Promise.all(allAuthors.map(author => author.getText()));
+            someAuthorNames = someAuthorNames.concat(allAuthorNames);
+        } catch (e) {}
+        someAuthorNames = someAuthorNames.map(name => fixName(name));
+        console.log("Authors: ", someAuthorNames);
         try {
             const citationsElem = await driver2.findElement(By.css("#formSmash\\:citings > span"));
             const citationsText = await citationsElem.getText();
@@ -36,6 +44,11 @@ async function scrape() {
     return allLinkUrls.length;
 }
 
+function fixName(name) {
+    const parts = name.split(",");
+    const fixedName = parts[0] + " " + parts[1].trim().substring(0, 1);
+    return fixedName;
+}
 scrape().then(x => {
     console.log('Total: ' + x);
     driver.quit();
