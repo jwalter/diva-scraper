@@ -16,32 +16,55 @@ const openInTabChord = Key.chord(Key.CONTROL, Key.RETURN);
 
 driver.get(url);
 async function scrape() {
-    const allItems = await driver.findElements(By.css("#formSmash\\:items\\:resultList_list > li:nth-child(4)"));
+    const allItems = await driver.findElements(By.css("#formSmash\\:items\\:resultList_list > li"));
     const allLinks = await Promise.all(allItems.map(item => item.findElement(By.tagName('a'))));
+    const summaries = [];
     for (let link of allLinks) {
         const href = await link.getAttribute("href");
         await driver2.get(href);
-        const someAuthors = await driver2.findElements(By.xpath("//*[@id='formSmash:some']/h3"));
-        let someAuthorNames = await Promise.all(someAuthors.map(author => author.getText()));
+        const titleElem = await driver2.findElement(By.css("#innerEastCenter > span:nth-child(1) > span"));
+        const title = await titleElem.getText();
+        const someAuthorElems = await driver2.findElements(By.xpath("//*[@id='formSmash:some']/h3"));
+        let allAuthorElems = [];
         try {
             const moreAuthorsLink = await driver2.findElement(By.css("#formSmash\\:j_idt225 > span"));
             await moreAuthorsLink.click();
-            const allAuthors = await driver2.findElements(By.xpath("//*[@id='formSmash:all']/h3"));
-            const allAuthorNames = await Promise.all(allAuthors.map(author => author.getText()));
-            someAuthorNames = someAuthorNames.concat(allAuthorNames);
-        } catch (e) {}
-        someAuthorNames = someAuthorNames.map(name => fixName(name));
-        console.log("Authors: ", someAuthorNames);
+            const moreAuthorElems = await driver2.findElements(By.xpath("//*[@id='formSmash:all']/h3"));
+            allAuthorElems = someAuthorElems.concat(moreAuthorElems);
+        } catch (e) {
+            allAuthorElems = someAuthorElems;
+        }
+        const authors = [];
+        for (let authorElem of allAuthorElems) {
+            const name = await authorElem.getText();
+            const org = await authorElem.findElement(By.xpath("following::div/span"));
+            const orgText = await org.getText();
+            authors.push(
+                {
+                    name: fixName(name),
+                    cmiv: orgText.indexOf("CMIV") != -1
+                });
+        }
+        const publishedIn = await driver2.findElement(By.xpath("//span[@class='displayFields']/span[@class='italicLabel']/.."));
+        const publishedInText = await publishedIn.getText();
+        
+        let citationsText = "-";
         try {
             const citationsElem = await driver2.findElement(By.css("#formSmash\\:citings > span"));
-            const citationsText = await citationsElem.getText();
-            console.log("Citations: ", citationsText);
+            citationsText = await citationsElem.getText();
         } catch (e) {
-            console.log("No citations");
+            // No citations
         }
+        const summary = {
+            title: title,
+            authors: authors,
+            in: publishedInText.trim(),
+            citations: citationsText
+        }
+        summaries.push(summary);
+        console.log("Summarized: " + summaries.length + " " + summary.title);
     }
-    const allLinkUrls = await Promise.all(allLinks.map(l => l.getAttribute('href')));
-    return allLinkUrls.length;
+    return summaries;
 }
 
 function fixName(name) {
@@ -50,7 +73,8 @@ function fixName(name) {
     return fixedName;
 }
 scrape().then(x => {
-    console.log('Total: ' + x);
+    console.log(JSON.stringify(x, null, 2));
+    console.log('Total: ' + x.length);
     driver.quit();
     driver2.quit();
 });
