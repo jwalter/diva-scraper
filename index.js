@@ -13,11 +13,9 @@ async function cheerioScrape() {
     var publications = $('#formSmash\\:items\\:resultList_list > li');
 
     for (let elem of publications.toArray()) {
-        //console.log($(elem).find('a').first().text());
-        //console.log($(elem).find('a').first().attr('href'));
         const info = await articleInfo($(elem).find('a').first().attr('href'));
         console.log(info);
-    };
+    }
 }
 
 cheerioScrape();
