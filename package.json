@@ -4,9 +4,14 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "selenium-webdriver": "^3.3.0"
+    "cheerio": "^0.22.0",
+    "request": "^2.81.0"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^19.0.2"
   }
 }
